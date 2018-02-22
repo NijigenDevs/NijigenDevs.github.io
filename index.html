@@ -428,8 +428,8 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 										</select>
 									</td>
 									<td></td>
+									<td><button class="btn btn-info" id="b-random-room">随机端口</button></td>
 									<td><button class="btn btn-primary" id="b-create-room">开启</button></td>
-									<td></td>
 						    </tr>
 						</table>
 
@@ -720,8 +720,19 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 		$(".room-tr").remove();
 	}
 
+	var regetRooms = function(){
+		setTimeout(function(){
+			if ($("#gameRoom.modal").attr("aria-hidden") == "false"){
+				console.log("reget")
+				getRooms();
+				regetRooms();
+			}
+		}, 60000);
+	}
 	$(document).ready(function(){
 		// copyToClipboard($("title")[0])
+		regetRooms();
+
 	});
 
 	function copyToClipboard(elem) {
@@ -797,7 +808,8 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 	var api_site = "http://140.143.184.211"
 
 	// get rooms
-	$(document).on("click", "#click-room", function(){
+
+	var getRooms = function(){
 		$.ajax({
 	   type: "GET",
 	   dataType: "json",
@@ -816,8 +828,14 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 
 	 		},
 		});
-	})
+	}
 
+	$(document).on("click", "#click-room", function(){
+		getRooms();
+	})
+	$(document).on("click", "#b-random-room", function(){
+		$("#i-create-room").val(1025 + Math.round(Math.random() * 64510));
+	})
 	// create room
 	$(document).on("click", "#b-create-room", function(){
 		var port = $("#i-create-room").val();
@@ -830,6 +848,9 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 		if (isNaN(Number(port))){
 			alert("请输入一个数字的端口！");
 			$("#i-create-room").val("");
+			return
+		}else if (Number(port) < 1025 || Number(port) > 65535){
+			alert("端口应在[1025-65535]范围内！");
 			return
 		}
 
