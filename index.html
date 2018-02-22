@@ -72,7 +72,7 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 										<li><a href="#blog" class="scroll">最新情报</a></li>
 										<li><a href="#gallery" class="scroll">游戏图片</a></li>
 										<li><a href="#team" class="scroll">开发团队</a></li>
-										<li><a href="#" data-toggle="modal" data-target="#gameRoom" style="outline:0;">游戏房间</a></li>
+										<li><a href="#" data-toggle="modal" data-target="#gameRoom" style="outline:0;" id="click-room">游戏房间</a></li>
 									</ul>
 								</nav>
 							</div>
@@ -414,7 +414,7 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 						  <tbody id="saimoe-body" align="center">
 								<tr class="info">
 									<td>
-										<input type="text" id="i-create-room" onkeypress='return event.charCode >= 48 && event.charCode <= 57' minlength="4" maxlength="5" style="max-width: 50px;"></input>
+										<input type="text" class="form-control" id="i-create-room" onkeypress='return event.charCode >= 48 && event.charCode <= 57' minlength="4" maxlength="5" style="max-width: 70px;"></input>
 									</td>
 						      <td>
 										<select name="roomTypeDropDown" id="s-create-room">
@@ -691,6 +691,7 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 	<!-- Tabs-JavaScript -->
 	<script src="js/jquery.filterizr.js"></script>
 		<script src="js/controls.js"></script>
+		<script src="js/clipboard.min.js"></script>
 		<script type="text/javascript">
 			$(function() {
 				$('.filtr-container').filterizr();
@@ -719,36 +720,113 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 		$(".room-tr").remove();
 	}
 
-	// get rooms
-	$.ajax({
-   type: "GET",
-   dataType: "json",
-   url: "http://game.saimoemod.org:8080/rooms",
-   success: function(data){
-		 clearRooms();
-		 if (!data || data.length == 0){
-			 return
-		 }
-		 	for (var i=0; i<data.length; i++){
-				$("#saimoe-body").append('<tr class="room-tr"><td class="norm">' + data[i]['port'] + '</td><td class="norm">' + data[i]['mode'] + '人局</td><td class="norm">正常</td><td><button class="btn btn-info refresh-room">刷新</button></td><td><button class="btn btn-danger close-room">终止</button></td></tr>');
-			}
-
-   },
-	 error: function(XMLHttpRequest, textStatus, errorThrown){
-			console.log(XMLHttpRequest)
-			console.log(textStatus)
-
-			alert( "获取房间失败: " + textStatus );
-			console.log(errorThrown)
-
- 		},
+	$(document).ready(function(){
+		// copyToClipboard($("title")[0])
 	});
+
+	function copyToClipboard(elem) {
+	  // create hidden text element, if it doesn't already exist
+    var targetId = "_hiddenCopyText_";
+    var isInput = elem.tagName === "INPUT" || elem.tagName === "TEXTAREA";
+    var origSelectionStart, origSelectionEnd;
+    if (isInput) {
+        // can just use the original source element for the selection and copy
+        target = elem;
+        origSelectionStart = elem.selectionStart;
+        origSelectionEnd = elem.selectionEnd;
+    } else {
+        // must use a temporary form element for the selection and copy
+        target = document.getElementById(targetId);
+        if (!target) {
+            var target = document.createElement("textarea");
+            target.style.position = "absolute";
+            target.style.left = "-9999px";
+            target.style.top = "0";
+            target.id = targetId;
+            document.body.appendChild(target);
+        }
+        target.textContent = elem.textContent;
+    }
+    // select the content
+    var currentFocus = document.activeElement;
+    target.focus();
+    target.setSelectionRange(0, target.value.length);
+
+    // copy the selection
+    var succeed;
+    try {
+    	  succeed = document.execCommand("copy");
+    } catch(e) {
+        succeed = false;
+    }
+    // restore original focus
+    if (currentFocus && typeof currentFocus.focus === "function") {
+        currentFocus.focus();
+    }
+
+    if (isInput) {
+        // restore prior selection
+        elem.setSelectionRange(origSelectionStart, origSelectionEnd);
+    } else {
+        // clear temporary content
+        target.textContent = "";
+    }
+    return succeed;
+}
+
+
+	var refreshRooms = function(data){
+		if (typeof(data) == "string"){
+			data = jQuery.parseJSON(data)
+		}
+
+		if (!data || data.length == 0){
+			return
+		}
+		 for (var i=0; i<data.length; i++){
+			 $("#saimoe-body").append('<tr class="room-tr"><td class="norm">' + data[i]['Port'] + '</td><td class="norm">' + data[i]['Mode'] + '人局</td><td class="norm">正常</td><td><button class="btn btn-info refresh-room">刷新</button></td><td><button class="btn btn-danger close-room">终止</button></td></tr>');
+		 }
+
+	}
+	$(document).on("click", ".copy-port", function(e){
+		e.preventDefault()
+		// copyToClipboard(this);
+	})
+
+
+	var api_site = "http://140.143.184.211"
+
+	// get rooms
+	$(document).on("click", "#click-room", function(){
+		$.ajax({
+	   type: "GET",
+	   dataType: "json",
+	   url: api_site + "/rooms",
+	   success: function(data){
+			 clearRooms();
+			 refreshRooms(data);
+
+	   },
+		 error: function(XMLHttpRequest, textStatus, errorThrown){
+				console.log(XMLHttpRequest)
+				console.log(textStatus)
+
+				alert( "获取房间失败: " + textStatus );
+				console.log(errorThrown)
+
+	 		},
+		});
+	})
 
 	// create room
 	$(document).on("click", "#b-create-room", function(){
 		var port = $("#i-create-room").val();
 
 		// is number
+		if (!port){
+			alert("请输入端口！");
+			return;
+		}
 		if (isNaN(Number(port))){
 			alert("请输入一个数字的端口！");
 			$("#i-create-room").val("");
@@ -761,15 +839,10 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 	   type: "POST",
 	   dataType: "json",
 		 data: '{"port": ' + port + ', "mode": ' + type + '}',
-	   url: "http://game.saimoemod.org:8080/rooms/create",
+	   url: api_site + "/rooms/create",
 	   success: function(data){
 			 clearRooms();
-			 if (!data || data.length == 0){
-				 return
-			 }
-			 	for (var i=0; i<data.length; i++){
-					$("#saimoe-body").append('<tr class="room-tr"><td class="norm">' + data[i]['port'] + '</td><td class="norm">' + data[i]['mode'] + '人局</td><td class="norm">正常</td><td><button class="btn btn-info refresh-room">刷新</button></td><td><button class="btn btn-danger close-room">终止</button></td></tr>');
-				}
+			 refreshRooms(data);
 	   },
 		 error: function(XMLHttpRequest, textStatus, errorThrown){
 				console.log(XMLHttpRequest)
@@ -792,9 +865,9 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 			var portId = $($(this).parent().siblings()[0]).text();
 
 			$.ajax({
-		   type: "UPDATE",
+		   type: "GET",
 		   dataType: "text",
-		   url: "http://game.saimoemod.org:8080/rooms/" + portId,
+		   url: api_site + "/rooms/" + portId,
 		   success: function(data){
 				 	// do nothing
 					$($this.parent().siblings()[2]).text("正常");
@@ -815,37 +888,63 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 			});
 	});
 
-  // delete room
-	$(document).on("click", ".close-room", function(){
-		var $this = $(this);
-		$($this.parent().siblings()[2]).text("正在删除...");
-			var portId = $($(this).parent().siblings()[0]).text();
 
-			$.ajax({
-		   type: "DELETE",
-		   dataType: "json",
-			 data: "NijigenDevs",
-		   url: "http://game.saimoemod.org:8080/rooms/" + portId,
-		   success: function(data){
-				 	// do nothing
-					clearRooms();
-	 			 if (!data || data.length == 0){
-	 				 return
-	 			 }
-	 			 	for (var i=0; i<data.length; i++){
-	 					$("#saimoe-body").append('<tr class="room-tr"><td class="norm">' + data[i]['port'] + '</td><td class="norm">' + data[i]['mode'] + '人局</td><td class="norm">正常</td><td><button class="btn btn-info refresh-room">刷新</button></td><td><button class="btn btn-danger close-room">终止</button></td></tr>');
-	 				}
-		   },
-			 error: function(XMLHttpRequest, textStatus, errorThrown){
-				 if (XMLHttpRequest.status == 500){
-					 alert("终止失败！快去让老A呱呱呱！")
-				 }else{
-					 alert("终止房间失败: " + textStatus)
-				 }
-				 $($this.parent().siblings()[2]).text("无法终止");
-				 $($this.parent().siblings()[2]).css("color", "red");
-		 		},
-			});
+
+
+  // delete room
+
+function doAuthentication(pass){
+	var $this = $current;
+	if (!$this){
+		return;
+	}
+	console.log(pass)
+	$($this.parent().siblings()[2]).text("正在删除...");
+		var portId = $($this.parent().siblings()[0]).text();
+
+		$.ajax({
+		 type: "DELETE",
+		 dataType: "json",
+		 data: pass,
+		 url: api_site + "/rooms/" + portId,
+		 success: function(data){
+				// do nothing
+				clearRooms();
+			 refreshRooms(data);
+		 },
+		 error: function(XMLHttpRequest, textStatus, errorThrown){
+			 if (XMLHttpRequest.status == 500){
+				 alert("终止失败！快去让老A呱呱呱！")
+			 }
+			 else if (XMLHttpRequest.status == 401){
+				 alert("这个口令不正确哦！")
+			 }else{
+				 alert("终止房间失败: " + textStatus)
+			 }
+			 $($this.parent().siblings()[2]).text("无法终止");
+			 $($this.parent().siblings()[2]).css("color", "red");
+			},
+		});
+}
+	var $current = null;
+	$(document).on("click", ".close-room", function(){
+		$current = $(this);
+
+		var thePrompt = window.open("", "", "width=220， height=120，resizable=no, status=no, menubar=no, location=no");
+    var theHTML = "";
+
+    theHTML += "<p>请输入口令</p>";
+    theHTML += "口令: <input type='password' id='thePass' placeholder=''/>";
+    theHTML += "<br />";
+    theHTML += "<input type='button' value='OK' id='authOK'/>";
+    thePrompt.document.body.innerHTML = theHTML;
+
+    thePrompt.document.getElementById("authOK").onclick = function () {
+			thePrompt.close();
+        doAuthentication(thePrompt.document.getElementById("thePass").value);
+    }
+
+
 	});
 
 
